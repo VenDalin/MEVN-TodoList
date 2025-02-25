@@ -115,18 +115,28 @@ exports.getPagination = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 5;
-
+    const search = req.query.search || "";
+    const sortBy = req.query.sortBy || "createdAt";
+    const sortOrder = req.query.sortOrder === "desc" ? -1 : 1;
     const startIndex = (page - 1) * limit;
-    const total = await Todo.countDocuments();
 
-    const data = await Todo.find().skip(startIndex).limit(limit);
+    const searchQuery = search
+      ? { task: { $regex: search, $options: "i" } }
+      : {};
+
+    const total = await Todo.countDocuments(searchQuery);
+
+    const data = await Todo.find(searchQuery)
+      .sort({ [sortBy]: sortOrder }) 
+      .skip(startIndex)
+      .limit(limit);
 
     res.status(200).json({
       page,
       limit,
       total,
       pages: Math.ceil(total / limit),
-      data: data,
+      data,
     });
   } catch (error) {
     res.status(500).json({ message: "Error paginating", error: error.message });
