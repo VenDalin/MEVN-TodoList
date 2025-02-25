@@ -1,12 +1,13 @@
-import express from 'express';
-import { getTodos ,createTodo, updateTodo ,deleteTodo , getTodo} from '../controller/todoController.js'
+const express = require('express');
+const todoController = require('../controller/todoController');
+const router = express.Router();
 
-const route = express.Router();
+router.get('/getAllData/:collection',todoController.getAllData);
+router.get('/getData/:collection/:id',todoController.getData);  
+router.post('/create/:collection',todoController.create);
+router.put('/update/:collection/:id', todoController.update);
+router.delete('/delete/:collection/:id',todoController.delete);
 
-route.get('/', getTodos);
-route.get('/:id', getTodo);  // Get a specific todo by id  // This is for testing purpose only. In a real application, you would want to use a unique identifier (like a UUID) instead of the ID from MongoDB.
-route.post('/create', createTodo);
-route.put('/update/:id', updateTodo);
-route.delete('/delete/:id', deleteTodo);
+router.get('/pagination', todoController.getPagination);
 
-export default route; 
+module.exports = router; 

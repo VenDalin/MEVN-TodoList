@@ -1,95 +1,134 @@
-import mongoose from "mongoose";
-import Todo from "../models/Todo.js";
+const mongoose = require("mongoose");
+const express = require("express");
+const Todo = require("../models/Todo");
+const User = require("../models/User");
 
 // Get all the tasks
-export const getTodos = async (req, res) => {
-    try {
-        const todos = await Todo.find();
-        res.status(200).json(todos);
-    } catch (error) {
-        console.error("Error fetching todos:", error);
-        res.status(500).json({ message: error.message });
+exports.getAllData = async (req, res) => {
+  try {
+    const collection = req.params.collection;
+    let Model;
+    if (collection === "todos") {
+      Model = Todo;
+    } else if (collection === "users") {
+      Model = User;
     }
+    const total = await Model.countDocuments();
+    const data = await Model.find();
+    res.status(200).json({ total, data });
+  } catch (error) {
+    console.error("Error fetching todos:", error);
+    res.status(500).json({ message: error.message });
+  }
 };
-
 // Get a single task
-export const getTodo = async (req, res) => {
-    try {
-        const id = req.params.id;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid task ID format" });
-        }
-
-        const todo = await Todo.findById(id);
-        if (!todo) return res.status(404).json({ message: "Task not found" });
-
-        res.status(200).json(todo);
-    } catch (error) {
-        console.error("Error fetching todo:", error);
-        res.status(500).json({ message: error.message });
+exports.getData = async (req, res) => {
+  try {
+    const collection = req.params.collection;
+    let Model;
+    if (collection === "todos") {
+      Model = Todo;
+    } else if (collection === "users") {
+      Model = User;
+    } else {
+      return res.status(400).json({ message: "Invalid collection" });
     }
+    const data = await Model.findById(req.params.id);
+    return res.status(200).json(data);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
-// Create a new task
-export const createTodo = async (req, res) => {
-    try {
-        const { task } = req.body;
-        if (!task) {
-            return res.status(400).json({ message: "Task field is required" });
-        }
+exports.create = async (req, res) => {
+  try {
+    const collection = req.params.collection;
+    let Model;
 
-        const newTask = new Todo({ task });
-        await newTask.save();
-        res.status(201).json({ message: "Task created successfully", newTask });
-    } catch (error) {
-        console.error("Error creating task:", error);
-        res.status(500).json({ message: "Error creating task", error: error.message });
+    if (collection === "todos") {
+      Model = Todo;
+    } else if (collection === "users") {
+      Model = User;
+    } else {
+      return res.status(400).json({ message: "Invalid collection" });
     }
+    const newData = new Model(req.body);
+    await newData.save();
+    return res.status(201).json({ message: "Created successfully", newData });
+  } catch (error) {
+    return res.status(500).json({ message: "Error creating", error: error.message });
+  }
 };
 
-// Update a task
-export const updateTodo = async (req, res) => {
-    try {
-        const id = req.params.id;
+exports.update = async (req, res) => {
+  try {
+    const collection = req.params.collection;
+    let Model;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid task ID format" });
-        }
-
-        console.log("Updating task with id:", id);
-        const updatedTask = await Todo.findByIdAndUpdate(id, req.body, { new: true });
-
-        if (!updatedTask) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-
-        res.status(200).json({ message: "Task updated successfully", updatedTask });
-    } catch (error) {
-        console.error("Error updating task:", error);
-        res.status(500).json({ message: "Error updating task", error: error.message });
+    if (collection === "todos") {
+      Model = Todo;
+    } else if (collection === "users") {
+      Model = User;
+    } else {
+      res.status(400).json({ message: "Invalid collection" });
     }
+    const updated = await Model.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+
+    if (!updated){
+      return  res.status(404).json({ message: "Document not found" });
+    }
+    return res.status(200).json({ message: "Updated successfully", updated });
+    
+  } catch (error) {
+    return res.status(500).json({ message: "Error updating", error: error.message });
+  }
 };
 
-// Delete a task
-export const deleteTodo = async (req, res) => {
-    try {
-        const id = req.params.id;
+exports.delete = async (req, res) => {
+  try {
+    const collection = req.params.collection;
+    let Model;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid task ID format" });
-        }
-
-        console.log("Deleting task with id:", id);
-        const deleteTask = await Todo.findByIdAndDelete(id);
-
-        if (!deleteTask) {
-            return res.status(404).json({ message: "Task not found" });
-        }
-
-        res.status(200).json({ message: "Task deleted successfully", deleteTask });
-    } catch (error) {
-        console.error("Error deleting task:", error);
-        res.status(500).json({ message: "Error deleting task", error: error.message });
+    if (collection === "todos") {
+      Model = Todo;
+    } else if (collection === "users") {
+      Model = User;
+    } else {
+      return res.status(400).json({ message: "Invalid collection" });
     }
+    const deleteDocument = await Model.findByIdAndDelete(req.params.id);
+
+    if(!deleteDocument){
+      return res.status(404).json({ message: "Document not found" });
+    }
+    return res.status(200).json({ message: "Deleted successfully", deleteDocument });
+   
+  } catch (error) {
+    return res.status(500).json({ message: "Error deleting", error: error.message });
+  }
+};
+
+// paginate
+exports.getPagination = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+
+    const startIndex = (page - 1) * limit;
+    const total = await Todo.countDocuments();
+
+    const data = await Todo.find().skip(startIndex).limit(limit);
+
+    res.status(200).json({
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+      data: data,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error paginating", error: error.message });
+  }
 };
